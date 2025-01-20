@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        header {
+            background-color: #007BFF;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .container {
+            padding: 2rem;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 0.75rem;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .form-section, .auth-section, .admin-section {
+            margin-bottom: 2rem;
+        }
+        .form-section input, .auth-section input {
+            padding: 0.5rem;
+            margin-right: 1rem;
+        }
+        .form-section button, .auth-section button, .admin-section button {
+            padding: 0.5rem 1rem;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .form-section button:hover, .auth-section button:hover, .admin-section button:hover {
+            background-color: #0056b3;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-firestore.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBjfeOWisZ2KqCTmt2Be7ZUXjmTzrL9ntY",
+            authDomain: "inventory-management-ec512.firebaseapp.com",
+            projectId: "inventory-management-ec512",
+            storageBucket: "inventory-management-ec512.appspot.com",
+            messagingSenderId: "485730291748",
+            appId: "1:485730291748:web:25ef66464ff77c44b488b1",
+            measurementId: "G-W1XZR2LM4Z"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // Signup function
+        async function signup() {
+            const username = document.getElementById('signupUsername').value;
+            const password = document.getElementById('signupPassword').value;
+
+            try {
+                if (!username || !password) {
+                    throw new Error('All fields are required');
+                }
+                await createUserWithEmailAndPassword(auth, username, password);
+                alert('Signup successful! You can now log in.');
+                document.getElementById('signupUsername').value = '';
+                document.getElementById('signupPassword').value = '';
+            } catch (error) {
+                console.error('Signup Error:', error);
+                alert(`Signup failed: ${error.message}`);
+            }
+        }
+
+        // Login function
+        async function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                if (!username || !password) {
+                    throw new Error('All fields are required');
+                }
+                await signInWithEmailAndPassword(auth, username, password);
+                alert(`Welcome, ${username}!`);
+                document.getElementById('authSection').classList.add('hidden');
+
+                // Simulate admin/user view
+                if (username === "admin@example.com") { // Example admin email
+                    document.getElementById('adminSection').classList.remove('hidden');
+                    updateInventoryTable();
+                } else {
+                    document.getElementById('inventorySection').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Login Error:', error);
+                alert(`Login failed: ${error.message}`);
+            }
+        }
+
+        // Function to add item to Firestore
+        async function addItem() {
+            const itemName = document.getElementById('itemName').value;
+            const itemQuantity = document.getElementById('itemQuantity').value;
+            const itemPrice = document.getElementById('itemPrice').value;
+
+            try {
+                if (!itemName || !itemQuantity || !itemPrice) {
+                    throw new Error('All fields are required');
+                }
+                await addDoc(collection(db, 'inventory'), {
+                    name: itemName,
+                    quantity: parseInt(itemQuantity, 10),
+                    price: parseFloat(itemPrice)
+                });
+                alert('Item added successfully!');
+                clearForm();
+                updateInventoryTable();
+            } catch (error) {
+                console.error('Add Item Error:', error);
+                alert(`Failed to add item: ${error.message}`);
+            }
+        }
+
+        // Function to fetch and display inventory items
+        async function updateInventoryTable() {
+            const tableBody = document.getElementById('inventoryTable').querySelector('tbody');
+            tableBody.innerHTML = '';
+
+            try {
+                const querySnapshot = await getDocs(collection(db, 'inventory'));
+                querySnapshot.forEach(doc => {
+                    const data = doc.data();
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${data.name}</td>
+                        <td>${data.quantity}</td>
+                        <td>${data.price}</td>
+                        <td><button onclick="deleteItem('${doc.id}')">Delete</button></td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+            } catch (error) {
+                console.error('Update Inventory Error:', error);
+                alert(`Failed to fetch inventory: ${error.message}`);
+            }
+        }
+
+        // Function to delete item from Firestore
+        async function deleteItem(itemId) {
+            try {
+                await deleteDoc(doc(db, 'inventory', itemId));
+                alert('Item deleted successfully!');
+                updateInventoryTable();
+            } catch (error) {
+                console.error('Delete Item Error:', error);
+                alert(`Failed to delete item: ${error.message}`);
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemQuantity').value = '';
+            document.getElementById('itemPrice').value = '';
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Inventory Management</h1>
+    </header>
+    <div class="container">
+        <!-- Signup and Login Section -->
+        <div class="auth-section" id="authSection">
+            <h2>Signup</h2>
+            <input type="email" id="signupUsername" placeholder="Email" required>
+            <input type="password" id="signupPassword" placeholder="Password" required>
+            <button onclick="signup()">Signup</button>
+
+            <h2>Login</h2>
+            <input type="email" id="loginUsername" placeholder="Email" required>
+            <input type="password" id="loginPassword" placeholder="Password" required>
+            <button onclick="login()">Login</button>
+        </div>
+
+        <!-- Admin Section -->
+        <div class="admin-section hidden" id="adminSection">
+            <h2>Admin Panel</h2>
+            <p>Welcome, Admin!</p>
+            <button onclick="updateInventoryTable()">View Inventory</button>
+
+            <h3>Users List</h3>
+            <table id="userDetailsTable">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dynamic rows will be added here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Form to add inventory items -->
+        <div class="form-section hidden" id="inventorySection">
+            <h2>Add New Item</h2>
+            <input type="text" id="itemName" placeholder="Item Name" required>
+            <input type="number" id="itemQuantity" placeholder="Quantity" required>
+            <input type="number" id="itemPrice" placeholder="Price" required>
+            <button onclick="addItem()">Add Item</button>
+
+            <!-- Inventory Table -->
+            <h2>Inventory List</h2>
+            <table id="inventoryTable">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Dynamic rows will be added here -->
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">Total</td>
+                        <td id="totalPrice">0</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
