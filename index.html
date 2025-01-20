@@ -78,8 +78,8 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Signup function
-        async function signup() {
+        // Attach functions to the global scope to make them accessible in HTML
+        window.signup = async function signup() {
             const username = document.getElementById('signupUsername').value;
             const password = document.getElementById('signupPassword').value;
 
@@ -95,10 +95,9 @@
                 console.error('Signup Error:', error);
                 alert(`Signup failed: ${error.message}`);
             }
-        }
+        };
 
-        // Login function
-        async function login() {
+        window.login = async function login() {
             const username = document.getElementById('loginUsername').value;
             const password = document.getElementById('loginPassword').value;
 
@@ -121,10 +120,9 @@
                 console.error('Login Error:', error);
                 alert(`Login failed: ${error.message}`);
             }
-        }
+        };
 
-        // Function to add item to Firestore
-        async function addItem() {
+        window.addItem = async function addItem() {
             const itemName = document.getElementById('itemName').value;
             const itemQuantity = document.getElementById('itemQuantity').value;
             const itemPrice = document.getElementById('itemPrice').value;
@@ -145,10 +143,9 @@
                 console.error('Add Item Error:', error);
                 alert(`Failed to add item: ${error.message}`);
             }
-        }
+        };
 
-        // Function to fetch and display inventory items
-        async function updateInventoryTable() {
+        window.updateInventoryTable = async function updateInventoryTable() {
             const tableBody = document.getElementById('inventoryTable').querySelector('tbody');
             tableBody.innerHTML = '';
 
@@ -169,10 +166,9 @@
                 console.error('Update Inventory Error:', error);
                 alert(`Failed to fetch inventory: ${error.message}`);
             }
-        }
+        };
 
-        // Function to delete item from Firestore
-        async function deleteItem(itemId) {
+        window.deleteItem = async function deleteItem(itemId) {
             try {
                 await deleteDoc(doc(db, 'inventory', itemId));
                 alert('Item deleted successfully!');
@@ -181,13 +177,13 @@
                 console.error('Delete Item Error:', error);
                 alert(`Failed to delete item: ${error.message}`);
             }
-        }
+        };
 
-        function clearForm() {
+        window.clearForm = function clearForm() {
             document.getElementById('itemName').value = '';
             document.getElementById('itemQuantity').value = '';
             document.getElementById('itemPrice').value = '';
-        }
+        };
     </script>
 </head>
 <body>
