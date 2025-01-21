@@ -127,10 +127,10 @@
                 if (!itemName || !itemQuantity || !itemPrice) {
                     throw new Error('All fields are required');
                 }
-                await addDoc(collection(db, 'inventory', userId), {
+                await addDoc(collection(db, `users/${userId}/inventory`), {
                     name: itemName,
                     quantity: parseInt(itemQuantity, 10),
-                    price: parseFloat(itemPrice)
+                    price: parseFloat(itemPrice),
                 });
                 alert('Item added successfully!');
                 clearForm();
@@ -166,7 +166,7 @@
         window.deleteItem = async function deleteItem(itemId) {
             try {
                 const userId = auth.currentUser.uid;
-                await deleteDoc(doc(db, 'inventory', userId, itemId));
+                await deleteDoc(doc(db, `users/${userId}/inventory/${itemId}`));
                 alert('Item deleted successfully!');
                 updateInventoryTable();
             } catch (error) {
