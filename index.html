@@ -121,37 +121,20 @@
             const itemName = document.getElementById('itemName').value;
             const itemQuantity = parseInt(document.getElementById('itemQuantity').value, 10);
             const itemPrice = parseFloat(document.getElementById('itemPrice').value);
-            const userId = auth.currentUser.uid;
+            const userId = auth.currentUser.uid; // Fetch the authenticated user's ID
 
             try {
                 if (!itemName || !itemQuantity || !itemPrice) {
                     throw new Error('All fields are required');
                 }
 
-                // Check if item already exists for the user
-                const itemQuery = query(
-                    collection(db, `users/${userId}/inventory`),
-                    where('name', '==', itemName)
-                );
-                const querySnapshot = await getDocs(itemQuery);
-
-                if (!querySnapshot.empty) {
-                    // Update existing item
-                    const existingItemDoc = querySnapshot.docs[0];
-                    await updateDoc(doc(db, `users/${userId}/inventory/${existingItemDoc.id}`), {
-                        quantity: increment(itemQuantity),
-                    });
-                    alert('Item quantity updated successfully!');
-                } else {
-                    // Add new item
-                    await addDoc(collection(db, `users/${userId}/inventory`), {
-                        name: itemName,
-                        quantity: itemQuantity,
-                        price: itemPrice,
-                    });
-                    alert('Item added successfully!');
-                }
-
+                const itemRef = collection(db, `users/${userId}/inventory`);
+                await addDoc(itemRef, {
+                    name: itemName,
+                    quantity: itemQuantity,
+                    price: itemPrice,
+                });
+                alert('Item added successfully!');
                 clearForm();
                 updateInventoryTable();
             } catch (error) {
@@ -166,71 +149,28 @@
             let totalPrice = 0;
 
             try {
-                const querySnapshot = await getDocs(collectionGroup(db, 'inventory'));
-                const itemMap = new Map();
+                const userId = auth.currentUser.uid; // Fetch the authenticated user's ID
+                const inventoryRef = collection(db, `users/${userId}/inventory`);
+                const querySnapshot = await getDocs(inventoryRef);
 
                 querySnapshot.forEach(doc => {
                     const data = doc.data();
-                    const key = data.name;
-
-                    if (itemMap.has(key)) {
-                        const existingItem = itemMap.get(key);
-                        existingItem.quantity += data.quantity;
-                        existingItem.price = data.price; // Price remains constant
-                        itemMap.set(key, existingItem);
-                    } else {
-                        itemMap.set(key, { quantity: data.quantity, price: data.price });
-                    }
-                });
-
-                itemMap.forEach((value, key) => {
-                    totalPrice += value.price * value.quantity;
+                    totalPrice += data.price * data.quantity;
 
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${key}</td>
-                        <td>${value.quantity}</td>
-                        <td>${value.price}</td>
-                        <td>
-                            <button onclick="deleteItem('${key}')">Delete</button>
-                        </td>
+                        <td>${data.name}</td>
+                        <td>${data.quantity}</td>
+                        <td>${data.price}</td>
                     `;
                     tableBody.appendChild(row);
                 });
 
-                // Update total price in the footer
                 document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
             } catch (error) {
                 console.error('Update Inventory Error:', error);
                 alert(`Failed to fetch inventory: ${error.message}`);
             }
-        };
-
-        window.deleteItem = async function deleteItem(itemName) {
-            try {
-                const userId = auth.currentUser.uid;
-                const itemQuery = query(
-                    collection(db, `users/${userId}/inventory`),
-                    where('name', '==', itemName)
-                );
-                const querySnapshot = await getDocs(itemQuery);
-
-                if (!querySnapshot.empty) {
-                    const itemDoc = querySnapshot.docs[0];
-                    await deleteDoc(doc(db, `users/${userId}/inventory/${itemDoc.id}`));
-                    alert('Item deleted successfully!');
-                    updateInventoryTable();
-                }
-            } catch (error) {
-                console.error('Delete Item Error:', error);
-                alert(`Failed to delete item: ${error.message}`);
-            }
-        };
-
-        window.clearForm = function clearForm() {
-            document.getElementById('itemName').value = '';
-            document.getElementById('itemQuantity').value = '';
-            document.getElementById('itemPrice').value = '';
         };
 
         window.logout = async function logout() {
@@ -244,6 +184,12 @@
                 console.error('Logout Error:', error);
                 alert(`Logout failed: ${error.message}`);
             }
+        };
+
+        window.clearForm = function clearForm() {
+            document.getElementById('itemName').value = '';
+            document.getElementById('itemQuantity').value = '';
+            document.getElementById('itemPrice').value = '';
         };
     </script>
 </head>
@@ -270,17 +216,24 @@
             <button onclick="updateInventoryTable()">View Inventory</button>
             <button onclick="logout()">Logout</button>
 
-            <h3>Users List</h3>
-            <table id="userDetailsTable">
+            <h3>Inventory List</h3>
+            <table id="inventoryTable">
                 <thead>
                     <tr>
-                        <th>Username</th>
-                        <th>Actions</th>
+                        <th>Name</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
                     </tr>
                 </thead>
                 <tbody>
                     <!-- Dynamic rows will be added here -->
                 </tbody>
+                <tfoot>
+                    <tr>
+                        <td colspan="2">Total</td>
+                        <td id="totalPrice">0</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
@@ -291,28 +244,6 @@
             <input type="number" id="itemPrice" placeholder="Price" required>
             <button onclick="addItem()">Add Item</button>
             <button onclick="logout()">Logout</button>
-
-            <h2>Inventory List</h2>
-            <table id="inventoryTable">
-                <thead>
-                    <tr>
-                        <th>Name</th>
-                        <th>Quantity</th>
-                        <th>Price</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- Dynamic rows will be added here -->
-                </tbody>
-                <tfoot>
-                    <tr>
-                        <td colspan="2">Total</td>
-                        <td id="totalPrice">0</td>
-                        <td></td>
-                    </tr>
-                </tfoot>
-            </table>
         </div>
     </div>
 </body>
