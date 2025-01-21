@@ -59,7 +59,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-auth.js";
-        import { getFirestore, collection, collectionGroup, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-firestore.js";
+        import { getFirestore, collection, collectionGroup, addDoc, getDocs, query, where, updateDoc, doc, increment } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBjfeOWisZ2KqCTmt2Be7ZUXjmTzrL9ntY",
@@ -119,20 +119,39 @@
 
         window.addItem = async function addItem() {
             const itemName = document.getElementById('itemName').value;
-            const itemQuantity = document.getElementById('itemQuantity').value;
-            const itemPrice = document.getElementById('itemPrice').value;
+            const itemQuantity = parseInt(document.getElementById('itemQuantity').value, 10);
+            const itemPrice = parseFloat(document.getElementById('itemPrice').value);
             const userId = auth.currentUser.uid;
 
             try {
                 if (!itemName || !itemQuantity || !itemPrice) {
                     throw new Error('All fields are required');
                 }
-                await addDoc(collection(db, `users/${userId}/inventory`), {
-                    name: itemName,
-                    quantity: parseInt(itemQuantity, 10),
-                    price: parseFloat(itemPrice),
-                });
-                alert('Item added successfully!');
+
+                // Check if item already exists for the user
+                const itemQuery = query(
+                    collection(db, `users/${userId}/inventory`),
+                    where('name', '==', itemName)
+                );
+                const querySnapshot = await getDocs(itemQuery);
+
+                if (!querySnapshot.empty) {
+                    // Update existing item
+                    const existingItemDoc = querySnapshot.docs[0];
+                    await updateDoc(doc(db, `users/${userId}/inventory/${existingItemDoc.id}`), {
+                        quantity: increment(itemQuantity),
+                    });
+                    alert('Item quantity updated successfully!');
+                } else {
+                    // Add new item
+                    await addDoc(collection(db, `users/${userId}/inventory`), {
+                        name: itemName,
+                        quantity: itemQuantity,
+                        price: itemPrice,
+                    });
+                    alert('Item added successfully!');
+                }
+
                 clearForm();
                 updateInventoryTable();
             } catch (error) {
@@ -144,31 +163,64 @@
         window.updateInventoryTable = async function updateInventoryTable() {
             const tableBody = document.getElementById('inventoryTable').querySelector('tbody');
             tableBody.innerHTML = '';
+            let totalPrice = 0;
 
             try {
                 const querySnapshot = await getDocs(collectionGroup(db, 'inventory'));
+                const itemMap = new Map();
+
                 querySnapshot.forEach(doc => {
                     const data = doc.data();
+                    const key = data.name;
+
+                    if (itemMap.has(key)) {
+                        const existingItem = itemMap.get(key);
+                        existingItem.quantity += data.quantity;
+                        existingItem.price = data.price; // Price remains constant
+                        itemMap.set(key, existingItem);
+                    } else {
+                        itemMap.set(key, { quantity: data.quantity, price: data.price });
+                    }
+                });
+
+                itemMap.forEach((value, key) => {
+                    totalPrice += value.price * value.quantity;
+
                     const row = document.createElement('tr');
                     row.innerHTML = `
-                        <td>${data.name}</td>
-                        <td>${data.quantity}</td>
-                        <td>${data.price}</td>
+                        <td>${key}</td>
+                        <td>${value.quantity}</td>
+                        <td>${value.price}</td>
+                        <td>
+                            <button onclick="deleteItem('${key}')">Delete</button>
+                        </td>
                     `;
                     tableBody.appendChild(row);
                 });
+
+                // Update total price in the footer
+                document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
             } catch (error) {
                 console.error('Update Inventory Error:', error);
                 alert(`Failed to fetch inventory: ${error.message}`);
             }
         };
 
-        window.deleteItem = async function deleteItem(itemId) {
+        window.deleteItem = async function deleteItem(itemName) {
             try {
                 const userId = auth.currentUser.uid;
-                await deleteDoc(doc(db, `users/${userId}/inventory/${itemId}`));
-                alert('Item deleted successfully!');
-                updateInventoryTable();
+                const itemQuery = query(
+                    collection(db, `users/${userId}/inventory`),
+                    where('name', '==', itemName)
+                );
+                const querySnapshot = await getDocs(itemQuery);
+
+                if (!querySnapshot.empty) {
+                    const itemDoc = querySnapshot.docs[0];
+                    await deleteDoc(doc(db, `users/${userId}/inventory/${itemDoc.id}`));
+                    alert('Item deleted successfully!');
+                    updateInventoryTable();
+                }
             } catch (error) {
                 console.error('Delete Item Error:', error);
                 alert(`Failed to delete item: ${error.message}`);
@@ -247,6 +299,7 @@
                         <th>Name</th>
                         <th>Quantity</th>
                         <th>Price</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
