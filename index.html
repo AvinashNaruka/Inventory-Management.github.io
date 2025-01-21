@@ -57,12 +57,10 @@
         }
     </style>
     <script type="module">
-        // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-auth.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-firestore.js";
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
             apiKey: "AIzaSyBjfeOWisZ2KqCTmt2Be7ZUXjmTzrL9ntY",
             authDomain: "inventory-management-ec512.firebaseapp.com",
@@ -73,12 +71,10 @@
             measurementId: "G-W1XZR2LM4Z"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Attach functions to the global scope to make them accessible in HTML
         window.signup = async function signup() {
             const username = document.getElementById('signupUsername').value;
             const password = document.getElementById('signupPassword').value;
@@ -109,8 +105,7 @@
                 alert(`Welcome, ${username}!`);
                 document.getElementById('authSection').classList.add('hidden');
 
-                // Simulate admin/user view
-                if (username === "avinashnaruka89@gmail.com") { // Example admin email
+                if (username === "avinashnaruka89@gmail.com") {
                     document.getElementById('adminSection').classList.remove('hidden');
                     updateInventoryTable();
                 } else {
@@ -184,6 +179,19 @@
             document.getElementById('itemQuantity').value = '';
             document.getElementById('itemPrice').value = '';
         };
+
+        window.logout = async function logout() {
+            try {
+                await signOut(auth);
+                alert('Logged out successfully!');
+                document.getElementById('authSection').classList.remove('hidden');
+                document.getElementById('inventorySection').classList.add('hidden');
+                document.getElementById('adminSection').classList.add('hidden');
+            } catch (error) {
+                console.error('Logout Error:', error);
+                alert(`Logout failed: ${error.message}`);
+            }
+        };
     </script>
 </head>
 <body>
@@ -191,7 +199,6 @@
         <h1>Inventory Management</h1>
     </header>
     <div class="container">
-        <!-- Signup and Login Section -->
         <div class="auth-section" id="authSection">
             <h2>Signup</h2>
             <input type="email" id="signupUsername" placeholder="Email" required>
@@ -204,11 +211,11 @@
             <button onclick="login()">Login</button>
         </div>
 
-        <!-- Admin Section -->
         <div class="admin-section hidden" id="adminSection">
             <h2>Admin Panel</h2>
             <p>Welcome, Admin!</p>
             <button onclick="updateInventoryTable()">View Inventory</button>
+            <button onclick="logout()">Logout</button>
 
             <h3>Users List</h3>
             <table id="userDetailsTable">
@@ -224,15 +231,14 @@
             </table>
         </div>
 
-        <!-- Form to add inventory items -->
         <div class="form-section hidden" id="inventorySection">
             <h2>Add New Item</h2>
             <input type="text" id="itemName" placeholder="Item Name" required>
             <input type="number" id="itemQuantity" placeholder="Quantity" required>
             <input type="number" id="itemPrice" placeholder="Price" required>
             <button onclick="addItem()">Add Item</button>
+            <button onclick="logout()">Logout</button>
 
-            <!-- Inventory Table -->
             <h2>Inventory List</h2>
             <table id="inventoryTable">
                 <thead>
