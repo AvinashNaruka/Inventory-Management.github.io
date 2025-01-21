@@ -59,7 +59,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-app.js";
         import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-firestore.js";
+        import { getFirestore, collection, collectionGroup, addDoc, getDocs, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.20.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBjfeOWisZ2KqCTmt2Be7ZUXjmTzrL9ntY",
@@ -121,12 +121,13 @@
             const itemName = document.getElementById('itemName').value;
             const itemQuantity = document.getElementById('itemQuantity').value;
             const itemPrice = document.getElementById('itemPrice').value;
+            const userId = auth.currentUser.uid;
 
             try {
                 if (!itemName || !itemQuantity || !itemPrice) {
                     throw new Error('All fields are required');
                 }
-                await addDoc(collection(db, 'inventory'), {
+                await addDoc(collection(db, 'inventory', userId), {
                     name: itemName,
                     quantity: parseInt(itemQuantity, 10),
                     price: parseFloat(itemPrice)
@@ -145,7 +146,7 @@
             tableBody.innerHTML = '';
 
             try {
-                const querySnapshot = await getDocs(collection(db, 'inventory'));
+                const querySnapshot = await getDocs(collectionGroup(db, 'inventory'));
                 querySnapshot.forEach(doc => {
                     const data = doc.data();
                     const row = document.createElement('tr');
@@ -153,7 +154,6 @@
                         <td>${data.name}</td>
                         <td>${data.quantity}</td>
                         <td>${data.price}</td>
-                        <td><button onclick="deleteItem('${doc.id}')">Delete</button></td>
                     `;
                     tableBody.appendChild(row);
                 });
@@ -165,7 +165,8 @@
 
         window.deleteItem = async function deleteItem(itemId) {
             try {
-                await deleteDoc(doc(db, 'inventory', itemId));
+                const userId = auth.currentUser.uid;
+                await deleteDoc(doc(db, 'inventory', userId, itemId));
                 alert('Item deleted successfully!');
                 updateInventoryTable();
             } catch (error) {
@@ -246,7 +247,6 @@
                         <th>Name</th>
                         <th>Quantity</th>
                         <th>Price</th>
-                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
