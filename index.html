@@ -138,23 +138,33 @@
                 clearForm();
                 updateInventoryTable();
             } catch (error) {
-                console.error('Add Item Error:', error);
+                console.error('Add Item Error:', error.message);
                 alert(`Failed to add item: ${error.message}`);
             }
         };
 
         window.updateInventoryTable = async function updateInventoryTable() {
             const tableBody = document.getElementById('inventoryTable').querySelector('tbody');
-            tableBody.innerHTML = '';
+            tableBody.innerHTML = ''; // Clear the table
             let totalPrice = 0;
 
             try {
-                const userId = auth.currentUser.uid; // Fetch the authenticated user's ID
+                const userId = auth.currentUser.uid; // Get the authenticated user's ID
+                console.log(`Fetching inventory for userId: ${userId}`);
+
                 const inventoryRef = collection(db, `users/${userId}/inventory`);
                 const querySnapshot = await getDocs(inventoryRef);
 
+                if (querySnapshot.empty) {
+                    console.warn("No inventory items found.");
+                    alert("No inventory items found.");
+                    return;
+                }
+
                 querySnapshot.forEach(doc => {
                     const data = doc.data();
+                    console.log(`Fetched item: ${doc.id}`, data); // Debugging output
+
                     totalPrice += data.price * data.quantity;
 
                     const row = document.createElement('tr');
@@ -168,7 +178,7 @@
 
                 document.getElementById('totalPrice').textContent = totalPrice.toFixed(2);
             } catch (error) {
-                console.error('Update Inventory Error:', error);
+                console.error('Update Inventory Error:', error.message);
                 alert(`Failed to fetch inventory: ${error.message}`);
             }
         };
